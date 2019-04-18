@@ -1,0 +1,115 @@
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.js"></script>
+    <link rel="stylesheet" href="style.css" type="text/css"/>
+    <title>Your Weather Forecast!</title>
+    <meta charset="utf-8"/>
+
+    <body>
+
+        <div id="app">
+            <h1></h1>
+            <h3></h3>
+            <h4></h4>
+            <table id="table" align="center">
+                <tr style="background-color:lightgoldenrodyellow" id="row1">
+                    <th>Date and Time</th>
+                    <th>Temparature</th>
+                    <th>Weather Conditions</th>
+                    <th>Humidity</th>
+                    <th>Pressure (hPa)</th>
+                </tr> 
+                
+                <tr v-if="Object.keys(weatherData).length != 0" style="background-color:skyblue">
+                    <td>Current Weather</td>
+                    <td>{{weatherData.main.temp}} °F</td>
+                    <td>{{weatherData.weather[0].description}}</td>
+                    <td>{{weatherData.main.humidity}}%</td>
+                    <td>{{weatherData.main.pressure}} hPa</td>
+                </tr>
+                
+                <span v-if="Object.keys(forecastData).length != 0">
+                <tr v-for="(data, idx) in forecastData.list" style="background-color:lightgray" v-on:click="toggle">
+                    <td>{{forecastData.list[idx].dt_txt}}</td>
+                    <td>{{forecastData.list[idx].main.temp}} °F</td>
+                    <td>{{forecastData.list[idx].weather[0].description}}</td>
+                    <td>{{forecastData.list[idx].main.humidity}}%</td>
+                    <td>{{forecastData.list[idx].main.pressure}} hPa</td>
+                </tr>
+                </span>
+            </table>    
+		</div>
+
+
+        <script>
+			var app = new Vue({
+				el: '#app',
+				data: {
+                    ipstackKey: '38b646c2506c69e0f2382469ace98361',
+                    weatherMapKey: 'b0d439dbec9a341859b77915653b86f4',
+                    likelyCount: 0,
+                    unlikelyCount: 0,
+                    userLocation: [],
+                    forecastData: [],
+                    weatherData: [],
+				},
+                computed: {
+                    count: function() {
+                        return `Right now there are ${this.likelyCount} likely forecasts, ${this.unlikelyCount} unlikely forecasts and ${40 - (this.likelyCount + this.unlikelyCount)} neutral forecasts.`
+                    },
+                    location: function() {
+                        return `Weather Forecast from ${this.userLocation.city}, ${this.userLocation.region_name}, ${this.userLocation.country_name}`;
+                    },
+                },
+                methods: {
+                    toggle: function(ev) {
+                        
+                        if(ev.target.parentElement.style.backgroundColor == "lightgray") {
+                            ev.target.parentElement.style="background-color:green";
+                            this.likelyCount += 1;
+                        }
+                        else if(ev.target.parentElement.style.backgroundColor == "green") {
+                            ev.target.parentElement.style="background-color:red"
+                            this.likelyCount -= 1;
+                            this.unlikelyCount += 1;
+                        }
+                        else{
+                            ev.target.parentElement.style="background-color:lightgray"
+                            this.unlikelyCount -= 1;
+                        }      
+                    }
+                },
+                created() { //fetch location and weather data when the webpage is created
+                    document.querySelector("h1").textContent = "LOADING...";
+                    document.querySelector("h3").textContent = "LOADING...";
+                    document.querySelector("h4").textContent = "LOADING...";
+                    var loading_img = document.createElement("img");
+                    loading_img.src = "https://ak7.picdn.net/shutterstock/videos/15423577/thumb/2.jpg"
+                    document.getElementById("app").prepend(loading_img);
+                    
+                    fetch(`http://api.ipstack.com/check?access_key=${this.ipstackKey}`)
+                        .then(response => response.json())
+                        .then(jsonIP => {
+							this.userLocation = jsonIP;
+                            return fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${this.userLocation.latitude}&lon=${this.userLocation.longitude}&units=imperial&appid=${this.weatherMapKey}`)})
+                        .then(response => response.json())
+                        .then(jsonForecast => {
+                            this.forecastData = jsonForecast;
+                            return fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${this.userLocation.latitude}&lon=${this.userLocation.longitude}&units=imperial&appid=${this.weatherMapKey}`)})
+                        .then(response => response.json())
+                        .then(jsonWeather => {
+                            this.weatherData = jsonWeather;
+                            document.querySelector("img").remove();
+                        });
+                    
+                        document.querySelector("h1").textContent = "{{location}}";
+                        document.querySelector("h3").textContent = "Click on a forecast to toggle between likely, unlikely, and neutral!";
+                        document.querySelector("h4").textContent = "{{count}}";
+
+                },
+
+			});
+
+        </script>
+    </body>
+</html>
